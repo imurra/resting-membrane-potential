@@ -315,34 +315,34 @@ const MembranePotentialSimulator = () => {
       <Card>
         <CardContent className="p-2 sm:p-3">
           <div className="space-y-2 sm:space-y-3">
-            <div>
-              <div className="w-full overflow-x-auto">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
                 <canvas
                   ref={canvasRef}
                   width={400}
                   height={300}
-                  className="border border-gray-200 rounded bg-white mx-auto max-w-full h-auto"
+                  className="border border-gray-200 rounded bg-white max-w-full h-auto"
                   style={{ maxWidth: '100%', height: 'auto' }}
                 />
               </div>
-              <div className="mt-2 flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+              <div className="flex flex-col gap-2 lg:w-48 lg:justify-start">
                 <Button 
                   onClick={() => setPumpActive(!pumpActive)}
                   className={`${pumpActive ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'} 
-                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation`}
+                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation w-full`}
                 >
                   {pumpActive ? 'Turn Pump Off' : 'Turn Pump On'}
                 </Button>
                 <Button 
                   onClick={() => setLeakChannelOpen(!leakChannelOpen)}
                   className={`${leakChannelOpen ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-500 hover:bg-gray-600'} 
-                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation`}
+                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation w-full`}
                 >
                   {leakChannelOpen ? 'Close K+ Channel' : 'Open K+ Channel'}
                 </Button>
                 <Button 
                   onClick={resetToDefaults}
-                  className="bg-purple-600 hover:bg-purple-700 px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation text-white"
+                  className="bg-purple-600 hover:bg-purple-700 px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation text-white w-full"
                 >
                   Reset All
                 </Button>
@@ -412,23 +412,9 @@ const MembranePotentialSimulator = () => {
         </CardContent>
       </Card>
 
-      {/* License Footer - Mobile Friendly */}
-      <div className="relative sm:fixed sm:bottom-4 sm:left-4 flex items-center justify-center sm:justify-start 
-                      space-x-2 bg-white bg-opacity-90 p-2 rounded-lg shadow-sm mt-6 sm:mt-0">
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 496 121" 
-          className="h-5 sm:h-6 flex-shrink-0"
-        >
-          <g stroke="black" strokeWidth="10" fill="none">
-            <circle cx="158.3" cy="60.7" r="53"/>
-            <circle cx="336" cy="60.7" r="53"/>
-            <path d="M71.5 89h173.5M249 38H71.5"/>
-            <path d="M135.3 45.7l23 30 23-30M313 45.7l23 30 23-30"/>
-          </g>
-          <text x="400" y="88" fontSize="90">4.0</text>
-        </svg>
-        <span className="text-xs sm:text-sm font-medium text-gray-800">CC BY-NC-SA</span>
+      {/* License Footer */}
+      <div className="text-center text-xs text-gray-600 mt-4">
+        Created by Ian Murray, Creative Commons copyright: CC BY-NC-SA
       </div>
     </div>
   );
