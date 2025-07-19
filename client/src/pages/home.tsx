@@ -315,8 +315,8 @@ const MembranePotentialSimulator = () => {
       <Card>
         <CardContent className="p-2 sm:p-3">
           <div className="space-y-2 sm:space-y-3">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
                 <canvas
                   ref={canvasRef}
                   width={400}
@@ -324,29 +324,43 @@ const MembranePotentialSimulator = () => {
                   className="border border-gray-200 rounded bg-white max-w-full h-auto"
                   style={{ maxWidth: '100%', height: 'auto' }}
                 />
+                <div className="text-center text-xs text-gray-600 mt-2">
+                  Created by Ian Murray, Creative Commons copyright: CC BY-NC-SA
+                </div>
               </div>
-              <div className="flex flex-col gap-2 lg:w-48 lg:justify-start">
-                <Button 
-                  onClick={() => setPumpActive(!pumpActive)}
-                  className={`${pumpActive ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'} 
-                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation w-full`}
-                >
-                  {pumpActive ? 'Turn Pump Off' : 'Turn Pump On'}
-                </Button>
-                <Button 
-                  onClick={() => setLeakChannelOpen(!leakChannelOpen)}
-                  className={`${leakChannelOpen ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-500 hover:bg-gray-600'} 
-                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation w-full`}
-                >
-                  {leakChannelOpen ? 'Close K+ Channel' : 'Open K+ Channel'}
-                </Button>
-                <Button 
-                  onClick={resetToDefaults}
-                  className="bg-purple-600 hover:bg-purple-700 px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation text-white w-full"
-                >
-                  Reset All
-                </Button>
+              <div>
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Membrane Potential</h3>
+                <canvas
+                  ref={graphRef}
+                  width={400}
+                  height={200}
+                  className="border border-gray-200 rounded bg-white max-w-full h-auto"
+                  style={{ maxWidth: '100%', height: 'auto' }}
+                />
               </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3 mt-4">
+              <Button 
+                onClick={() => setPumpActive(!pumpActive)}
+                className={`${pumpActive ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'} 
+                           px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation`}
+              >
+                {pumpActive ? 'Turn Pump Off' : 'Turn Pump On'}
+              </Button>
+              <Button 
+                onClick={() => setLeakChannelOpen(!leakChannelOpen)}
+                className={`${leakChannelOpen ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-500 hover:bg-gray-600'} 
+                           px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation`}
+              >
+                {leakChannelOpen ? 'Close K+ Channel' : 'Open K+ Channel'}
+              </Button>
+              <Button 
+                onClick={resetToDefaults}
+                className="bg-purple-600 hover:bg-purple-700 px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation text-white"
+              >
+                Reset All
+              </Button>
             </div>
 
             <div className="space-y-2 sm:space-y-3">
@@ -388,19 +402,6 @@ const MembranePotentialSimulator = () => {
                 </div>
               </div>
 
-              <div>
-                <h3 className="font-semibold mb-2 text-sm sm:text-base">Membrane Potential</h3>
-                <div className="w-full overflow-x-auto">
-                  <canvas
-                    ref={graphRef}
-                    width={400}
-                    height={200}
-                    className="border border-gray-200 rounded bg-white mx-auto max-w-full h-auto"
-                    style={{ maxWidth: '100%', height: 'auto' }}
-                  />
-                </div>
-              </div>
-
               <div className="border p-2 sm:p-3 rounded">
                 <h3 className="font-semibold mb-1 text-sm sm:text-base">Membrane Properties</h3>
                 <p className="text-xs sm:text-sm mb-1">
@@ -412,10 +413,7 @@ const MembranePotentialSimulator = () => {
         </CardContent>
       </Card>
 
-      {/* License Footer */}
-      <div className="text-center text-xs text-gray-600 mt-4">
-        Created by Ian Murray, Creative Commons copyright: CC BY-NC-SA
-      </div>
+
     </div>
   );
 };
