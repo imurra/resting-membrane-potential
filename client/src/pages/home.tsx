@@ -311,10 +311,10 @@ const MembranePotentialSimulator = () => {
       intracellularNa, extracellularNa, membranePotential]);
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 space-y-4 pb-20">
+    <div className="w-full max-w-4xl mx-auto p-1 sm:p-2 space-y-2 pb-4">
       <Card>
-        <CardContent className="p-3 sm:p-6">
-          <div className="space-y-4 sm:space-y-6">
+        <CardContent className="p-2 sm:p-3">
+          <div className="space-y-2 sm:space-y-3">
             <div>
               <div className="w-full overflow-x-auto">
                 <canvas
@@ -325,39 +325,39 @@ const MembranePotentialSimulator = () => {
                   style={{ maxWidth: '100%', height: 'auto' }}
                 />
               </div>
-              <div className="mt-4 flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+              <div className="mt-2 flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
                 <Button 
                   onClick={() => setPumpActive(!pumpActive)}
                   className={`${pumpActive ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'} 
-                             px-4 py-3 text-sm sm:text-base min-h-[44px] touch-manipulation`}
+                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation`}
                 >
                   {pumpActive ? 'Turn Pump Off' : 'Turn Pump On'}
                 </Button>
                 <Button 
                   onClick={() => setLeakChannelOpen(!leakChannelOpen)}
                   className={`${leakChannelOpen ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-500 hover:bg-gray-600'} 
-                             px-4 py-3 text-sm sm:text-base min-h-[44px] touch-manipulation`}
+                             px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation`}
                 >
                   {leakChannelOpen ? 'Close K+ Channel' : 'Open K+ Channel'}
                 </Button>
                 <Button 
                   onClick={resetToDefaults}
-                  className="bg-purple-600 hover:bg-purple-700 px-4 py-3 text-sm sm:text-base min-h-[44px] touch-manipulation text-white"
+                  className="bg-purple-600 hover:bg-purple-700 px-3 py-2 text-xs sm:text-sm min-h-[36px] touch-manipulation text-white"
                 >
                   Reset All
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-2 sm:space-y-3">
               <div>
-                <h3 className="font-semibold mb-3 text-base sm:text-lg">Ion Permeability Controls</h3>
-                <div className="space-y-4 sm:space-y-6">
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Ion Permeability Controls</h3>
+                <div className="space-y-2 sm:space-y-3">
                   <div>
-                    <label className="block mb-3 text-sm sm:text-base font-medium">
+                    <label className="block mb-1 text-xs sm:text-sm font-medium">
                       Intracellular [K+] (mM): {intracellularK.toFixed(1)}
                     </label>
-                    <div className="px-1 py-2">
+                    <div className="px-1 py-1">
                       <Slider
                         value={[intracellularK]}
                         onValueChange={([value]) => setIntracellularK(value)}
@@ -370,10 +370,10 @@ const MembranePotentialSimulator = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block mb-3 text-sm sm:text-base font-medium">
+                    <label className="block mb-1 text-xs sm:text-sm font-medium">
                       Extracellular [K+] (mM): {extracellularK.toFixed(1)}
                     </label>
-                    <div className="px-1 py-2">
+                    <div className="px-1 py-1">
                       <Slider
                         value={[extracellularK]}
                         onValueChange={([value]) => setExtracellularK(value)}
@@ -389,7 +389,7 @@ const MembranePotentialSimulator = () => {
               </div>
 
               <div>
-                <h3 className="font-semibold mb-3 text-base sm:text-lg">Membrane Potential</h3>
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Membrane Potential</h3>
                 <div className="w-full overflow-x-auto">
                   <canvas
                     ref={graphRef}
@@ -401,9 +401,9 @@ const MembranePotentialSimulator = () => {
                 </div>
               </div>
 
-              <div className="border p-3 sm:p-4 rounded">
-                <h3 className="font-semibold mb-2 text-base sm:text-lg">Membrane Properties</h3>
-                <p className="text-sm sm:text-base mb-2">
+              <div className="border p-2 sm:p-3 rounded">
+                <h3 className="font-semibold mb-1 text-sm sm:text-base">Membrane Properties</h3>
+                <p className="text-xs sm:text-sm mb-1">
                   Current membrane potential: <span className="font-bold">{membranePotential.toFixed(1)} mV</span>
                 </p>
               </div>
