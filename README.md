@@ -2,17 +2,13 @@
 
 Interactive teaching simulator for the resting membrane potential and the action potential: the Na⁺/K⁺ pump (3-2-1 NOKIA: 3 Na⁺ out, 2 K⁺ in, 1 ATP), K⁺ and Na⁺ leaks, plasma electrolytes, and nerve vs skeletal/cardiac muscle in hypokalemia.
 
-## Two versions in this repository
+## Use it
 
-- **`standalone/index.html`**: the current simulator. A single self-contained web page; open it in any browser, no install or server needed.
-- **The Replit app** (`client/`, `server/`): the original React/Express version. To run it locally:
-  ```
-  npm install
-  npm run dev
-  ```
-  then open http://localhost:5000. Works on Windows, macOS and Linux.
+Online: **https://imurra.github.io/resting-membrane-potential/**
 
-## What the standalone simulator models
+Or open `index.html` in any browser. It is a single self-contained page: no install, build or server needed.
+
+## What the simulator models
 
 - **Resting potential:** Goldman–Hodgkin–Katz equation with the pump's 3:2 ratio (Mullins–Noda form). Permeability ratio P_K : P_Na : P_Cl = 1 : 0.04 : 0.45 (Hodgkin & Katz, 1949). Cl⁻ redistributes passively, so it buffers sudden changes but leaves the steady state unchanged.
 - **Pump off:** an immediate small electrogenic loss, then slow rundown of the gradients to Gibbs–Donnan equilibrium (not equal concentrations), with cell swelling. Time is compressed.
