@@ -70,11 +70,12 @@ body {
   background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.5;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 12px 20px;
+  padding-block: 8px 16px;
 }
-.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 10px; }
-header h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
-header p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.wrap { max-width: 1280px; margin: 0 auto; display: grid; gap: 8px; }
+header h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 14px; }
+header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 16px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
@@ -138,21 +139,36 @@ summary { cursor: pointer; font-weight: 600; }
 .credit { font-size: 0.75rem; color: var(--muted); text-align: center; }
 .copy { font-size: 0.75rem; color: var(--muted); }
 .copy a { color: var(--muted); }
-.license { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--muted); }
-.license svg { height: 22px; width: auto; flex-shrink: 0; }
+.license { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 14px; font-size: 0.75rem; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--muted); }
+.license svg { height: 18px; width: auto; flex-shrink: 0; }
 .license svg circle, .license svg path { stroke: var(--ink); }
 .license svg text { fill: var(--ink); }
 .license b { color: var(--ink); font-weight: 600; }
 .license a { color: var(--trace); }
 .license p { margin: 0; flex: 1 1 320px; min-width: 0; }
 
-/* Compact dashboard: left column (recording, stimulus, electrolytes), right column (membrane, controls, status) */
-.dashboard { grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 18px; padding: 14px; align-items: start; }
-.dcol { display: grid; gap: 14px; min-width: 0; align-content: start; }
-.area-cell canvas { max-height: 300px; width: auto; max-width: 100%; justify-self: start; }
+/* Compact dashboard: left column (recording, stimulus, electrolytes), right column (membrane, controls, status, clinical) */
+.dashboard { grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr); gap: 14px 18px; padding: 12px 14px; align-items: start; }
+.dcol { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.area-cell canvas { max-height: min(330px, 38vh); width: auto; max-width: 100%; justify-self: start; }
+.presets button { font-size: 0.82rem; padding: 4px 10px; min-height: 30px; }
+.seg button { padding: 6px 10px; min-height: 32px; }
+button { min-height: 36px; padding: 8px 14px; }
+#stimBtn { padding: 8px 16px; }
+.legend { font-size: 0.75rem; gap: 2px 12px; }
+.clinical { padding: 6px 10px; gap: 4px; }
+.clinical p { font-size: 0.8rem; line-height: 1.4; }
+.clinical .limit { font-size: 0.72rem; }
 @media (max-width: 680px) {
-  .dashboard { grid-template-columns: minmax(0, 1fr); }
+  /* phone: one column, in teaching order */
+  .dashboard { grid-template-columns: minmax(0, 1fr); padding: 10px; }
+  .dcol { display: contents; }
+  .area-scope { order: 1; } .area-stim { order: 2; } .area-lytes { order: 3; } .clinical { order: 4; }
+  .area-cell { order: 5; } .area-memb { order: 6; } .area-status { order: 7; }
   .area-cell canvas { width: 100%; max-width: 440px; max-height: none; }
+  .presets { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .presets button { flex: 0 0 auto; }
+  header p { display: none; }
 }
 .more { padding: 12px 14px; gap: 10px; }
 </style>
@@ -233,12 +249,6 @@ summary { cursor: pointer; font-weight: 600; }
       </div>
     </div>
 
-    <!-- Clinical note -->
-    <div class="clinical" aria-live="polite">
-      <div class="label">Clinical note</div>
-      <div id="clinNote"></div>
-      <p class="limit"><b>Limitation:</b> this models a nerve membrane. It does not simulate the cardiac action potential, the ECG, or brain water, so it shows the cellular mechanism, not the clinical danger. Not for clinical decisions.</p>
-    </div>
 
     </div>
     <div class="dcol dright">
@@ -281,6 +291,12 @@ summary { cursor: pointer; font-weight: 600; }
     <div class="area-status col">
       <div class="status" id="status" aria-live="polite"></div>
       <div class="clock" id="clock"></div>
+    </div>
+    <!-- Clinical note -->
+    <div class="clinical" aria-live="polite">
+      <div class="label">Clinical note</div>
+      <div id="clinNote"></div>
+      <p class="limit"><b>Limitation:</b> this models a nerve membrane. It does not simulate the cardiac action potential, the ECG, or brain water, so it shows the cellular mechanism, not the clinical danger. Not for clinical decisions.</p>
     </div>
     </div>
   </section>
@@ -615,7 +631,7 @@ summary { cursor: pointer; font-weight: 600; }
     const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
     cell.width = 400 * dpr; cell.height = 300 * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     SW = Math.max(300, Math.round(scope.getBoundingClientRect().width || 900));
-    SH = SW < 560 ? 260 : 300;
+    SH = SW < 560 ? 240 : Math.round(Math.max(210, Math.min(300, window.innerHeight * 0.34)));
     scope.width = SW * dpr; scope.height = SH * dpr; scope.style.height = SH + 'px';
     stx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
