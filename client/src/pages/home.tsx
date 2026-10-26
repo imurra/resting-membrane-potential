@@ -45,12 +45,12 @@ const MembranePotentialSimulator = () => {
   const [extracellularNa, setExtracellularNa] = useState(145);
   const [membranePotential, setMembranePotential] = useState(-70);
   const [time, setTime] = useState(0);
-  const potentialHistory = useRef([]);
-  
-  const canvasRef = useRef(null);
-  const graphRef = useRef(null);
+  const potentialHistory = useRef<{ time: number; potential: number }[]>([]);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const graphRef = useRef<HTMLCanvasElement>(null);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
-  const animationFrameRef = useRef();
+  const animationFrameRef = useRef<number>();
 
   const resetToDefaults = () => {
     setPumpActive(true);
@@ -285,7 +285,9 @@ const MembranePotentialSimulator = () => {
         gtx.lineWidth = 3;
         potentialHistory.current.forEach((point, i) => {
           const x = 50 + (i / potentialHistory.current.length) * (graph.width - 80);
-          const y = 30 + ((0 - point.potential) / 100) * (graph.height - 60);
+          // Clamp to the plotted 0 to -100 mV window so the trace never leaves the axes
+          const v = Math.max(-100, Math.min(0, point.potential));
+          const y = 30 + ((0 - v) / 100) * (graph.height - 60);
           if (i === 0) gtx.moveTo(x, y);
           else gtx.lineTo(x, y);
         });
@@ -365,7 +367,7 @@ const MembranePotentialSimulator = () => {
 
             <div className="space-y-2 sm:space-y-3">
               <div>
-                <h3 className="font-semibold mb-2 text-sm sm:text-base">Ion Permeability Controls</h3>
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Ion Concentration Controls</h3>
                 <div className="space-y-2 sm:space-y-3">
                   <div>
                     <label className="block mb-1 text-xs sm:text-sm font-medium">
