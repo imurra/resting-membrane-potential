@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)} body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif} [hidden]{display:none!important} img{max-width:100%}</style>
+<title>Membrane Potential Simulator</title>
+<!--
+  Membrane Potential Simulator
+  Copyright (c) 2024-2026 Ian V. J. Murray. All rights reserved except as licensed below.
+  Licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
+  You may share and adapt this work for non-commercial purposes, provided you credit Ian V. J. Murray,
+  link to the license, indicate any changes, and distribute adaptations under the same license.
+-->
+<meta name="author" content="Ian V. J. Murray">
+<meta name="copyright" content="© 2024–2026 Ian V. J. Murray. CC BY-NC-SA 4.0">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: instrument panel in three bands — (1) membrane + action potential, (2) patient electrolytes, (3) slow Vm + membrane controls */
+:root {
+  --bg: #f3f5f8;
+  --panel: #ffffff;
+  --ink: #18212d;
+  --muted: #5b6676;
+  --line: #d6dce5;
+  --grid: #e6eaf0;
+  --ecf: rgba(214, 120, 120, 0.10);
+  --icf: rgba(110, 130, 220, 0.10);
+  --lipid: #c9b98f;
+  --na: #e07a12;
+  --k: #7a4fd0;
+  --pump: #2f9a4c;
+  --trace: #1f6fbf;
+  --ghost: #9aa3b0;
+  --thresh: #c0392b;
+  --off: #9aa3b0;
+  --ok: #2f8a4a;
+  --warn: #a8670a;
+  --bad: #c0392b;
+  --btn-ink: #ffffff;
+  --neutral-btn: #44505f;
+  --chip-bg: #eef1f5;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --panel: #18202a; --ink: #e6ebf2; --muted: #98a4b4; --line: #2c3746; --grid: #243040;
+    --ecf: rgba(230, 120, 120, 0.10); --icf: rgba(120, 145, 240, 0.12); --lipid: #7d6f4c;
+    --na: #ffa040; --k: #b08cff; --pump: #4cc46c; --trace: #5fb0ff; --ghost: #5d6876; --thresh: #ff6b6b; --off: #66717f;
+    --ok: #5fcf7e; --warn: #f0b04a; --bad: #ff6b6b;
+    --btn-ink: #0d1218; --neutral-btn: #a8b3c2; --chip-bg: #212b37;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --panel: #18202a; --ink: #e6ebf2; --muted: #98a4b4; --line: #2c3746; --grid: #243040;
+  --ecf: rgba(230, 120, 120, 0.10); --icf: rgba(120, 145, 240, 0.12); --lipid: #7d6f4c;
+  --na: #ffa040; --k: #b08cff; --pump: #4cc46c; --trace: #5fb0ff; --ghost: #5d6876; --thresh: #ff6b6b; --off: #66717f;
+  --ok: #5fcf7e; --warn: #f0b04a; --bad: #ff6b6b;
+  --btn-ink: #0d1218; --neutral-btn: #a8b3c2; --chip-bg: #212b37;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 20px;
+}
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 10px; }
+header h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 16px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+.col { min-width: 0; display: grid; gap: 8px; align-content: start; }
+.label { font-family: var(--font-display); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; margin: 0; }
+canvas { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.legend .dash { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed; vertical-align: 3px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button {
+  font: 600 0.9rem var(--font-body); color: var(--btn-ink); border: 0; border-radius: 6px;
+  padding: 10px 16px; min-height: 40px; cursor: pointer; touch-action: manipulation; background: var(--neutral-btn);
+}
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--trace); outline-offset: 2px; }
+#stimBtn { background: var(--trace); font-size: 1rem; padding: 10px 18px; }
+#pumpBtn { background: var(--pump); }
+#leakBtn { background: var(--k); }
+#pumpBtn.off, #leakBtn.off { background: var(--off); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; color: var(--ink); border-radius: 0; padding: 8px 12px; min-height: 36px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.presets button { background: var(--chip-bg); color: var(--ink); border: 1px solid var(--line); font-weight: 500; padding: 7px 12px; min-height: 34px; border-radius: 999px; }
+.presets button.lab { border-style: dashed; }
+.presets button[aria-pressed="true"] { border-color: var(--trace); box-shadow: inset 0 0 0 1px var(--trace); }
+.ctrl { display: grid; gap: 4px; }
+.ctrl .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ctrl label { font-size: 0.9rem; font-weight: 500; }
+.ctrl label span { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--trace); touch-action: none; }
+.scale { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 0.72rem; color: var(--muted); }
+.chip { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); }
+.readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.readouts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 480px) { .readouts, .readouts.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ro { border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; min-width: 0; }
+.ro .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.ro .v { font-family: var(--font-data); font-weight: 600; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.ro.vm .v { color: var(--trace); } .ro.ek .v { color: var(--k); } .ro.ena .v { color: var(--na); }
+.ro.good .v { color: var(--ok); } .ro.weak .v { color: var(--warn); } .ro.fail .v { color: var(--bad); }
+.ro.swollen { border-color: var(--bad); } .ro.swollen .v { color: var(--bad); }
+.ro.shrunk { border-color: var(--warn); } .ro.shrunk .v { color: var(--warn); }
+.status { font-size: 0.82rem; min-height: 1.2em; }
+.status.warn { color: var(--thresh); font-weight: 500; }
+.clock { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.note { font-size: 0.82rem; color: var(--muted); max-width: 72ch; margin: 0; }
+.clinical { border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 6px; padding: 8px 12px; display: grid; gap: 6px; }
+.clinical p { margin: 0; font-size: 0.85rem; max-width: 80ch; }
+.clinical p b { font-weight: 600; }
+.clinical .limit { color: var(--muted); font-size: 0.78rem; }
+details { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; }
+details[open] { display: grid; gap: 10px; }
+summary { cursor: pointer; font-weight: 600; }
+.eq { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); overflow-x: auto; white-space: nowrap; padding-bottom: 2px; }
+.eq b { color: var(--ink); font-weight: 600; }
+.mnemonic { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 2px 8px; border: 1px dashed var(--pump); border-radius: 6px; font-size: 0.8rem; color: var(--ink); }
+.mnemonic b { font-family: var(--font-display); font-size: 0.9rem; letter-spacing: 0.04em; color: var(--pump); }
+.credit { font-size: 0.75rem; color: var(--muted); text-align: center; }
+.copy { font-size: 0.75rem; color: var(--muted); }
+.copy a { color: var(--muted); }
+.license { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--muted); }
+.license svg { height: 22px; width: auto; flex-shrink: 0; }
+.license svg circle, .license svg path { stroke: var(--ink); }
+.license svg text { fill: var(--ink); }
+.license b { color: var(--ink); font-weight: 600; }
+.license a { color: var(--trace); }
+.license p { margin: 0; flex: 1 1 320px; min-width: 0; }
+
+/* Compact dashboard: left column (recording, stimulus, electrolytes), right column (membrane, controls, status) */
+.dashboard { grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 18px; padding: 14px; align-items: start; }
+.dcol { display: grid; gap: 14px; min-width: 0; align-content: start; }
+.area-cell canvas { max-height: 300px; width: auto; max-width: 100%; justify-self: start; }
+@media (max-width: 680px) {
+  .dashboard { grid-template-columns: minmax(0, 1fr); }
+  .area-cell canvas { width: 100%; max-width: 440px; max-height: none; }
+}
+.more { padding: 12px 14px; gap: 10px; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Membrane Potential Simulator</h1>
+    <p>Na⁺/K⁺ pump, ion leaks and plasma electrolytes: resting potential and action potential</p>
+  </header>
+
+  <section class="panel dashboard">
+    <div class="dcol dleft">
+    <!-- Scope -->
+    <div class="area-scope col">
+      <div class="label">Membrane potential (mV)</div>
+      <canvas id="scope" height="300" aria-label="Membrane potential recording: resting trace on a slow sweep with action potentials recorded inline at fast sweep"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--trace)"></i>V<sub>m</sub></span>
+        <span><i style="background:var(--grid); border-radius:2px"></i>Shaded: AP at fast sweep (20 ms)</span>
+        <span><i class="dash" style="border-color:var(--k)"></i>E<sub>K</sub></span>
+        <span><i class="dash" style="border-color:var(--na)"></i>E<sub>Na</sub></span>
+        <span><i class="dash" style="border-color:var(--thresh)"></i>Threshold (computed)</span>
+      </div>
+      <div class="copy">© 2024–2026 Ian V. J. Murray · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> (attribution, non-commercial, share-alike)</div>
+    </div>
+
+    <!-- Stimulus -->
+    <div class="area-stim col">
+      <div class="row">
+        <button id="stimBtn" type="button">⚡ Stimulate</button>
+        <div class="ctrl" style="flex:1; min-width: 160px;">
+          <label for="stim">Stimulus: <span id="stimVal">35</span> µA/cm² for 1 ms</label>
+          <input id="stim" type="range" min="5" max="80" step="1" value="35">
+        </div>
+      </div>
+      <div class="readouts">
+        <div class="ro" id="apResBox"><div class="k">Result</div><div class="v" id="apRes">—</div></div>
+        <div class="ro"><div class="k">Peak</div><div class="v" id="apPeak">—</div></div>
+        <div class="ro"><div class="k">Max dV/dt</div><div class="v" id="apDvdt">—</div></div>
+        <div class="ro"><div class="k">Started from</div><div class="v" id="apRest">—</div></div>
+      </div>
+      <div class="status warn" id="apNote" aria-live="polite"></div>
+    </div>
+
+    <!-- Electrolytes -->
+    <div class="area-lytes col">
+      <div class="row">
+        <span class="label">Plasma electrolytes</span>
+        <div class="seg" id="tissue" role="group" aria-label="Tissue type">
+          <button type="button" data-t="nerve" aria-pressed="true">Nerve</button>
+          <button type="button" data-t="muscle">Skeletal &amp; cardiac muscle</button>
+        </div>
+      </div>
+      <div class="presets" id="presets" role="group" aria-label="Clinical presets">
+        <button type="button" data-ko="4" data-nao="145">Normal</button>
+        <button type="button" data-ko="2.5" data-nao="145">Hypo-K 2.5</button>
+        <button type="button" data-ko="1.5" data-nao="145">Severe hypo-K 1.5</button>
+        <button type="button" data-ko="7.5" data-nao="145">Hyper-K 7.5</button>
+        <button type="button" data-ko="10" data-nao="145">Severe hyper-K 10</button>
+        <button type="button" data-ko="4" data-nao="120">Hypo-Na 120</button>
+        <button type="button" data-ko="4" data-nao="160">Hyper-Na 160</button>
+        <button type="button" class="lab" data-ko="4" data-nao="73">Lab: Na⁺ 50%</button>
+        <button type="button" class="lab" data-ko="4" data-nao="29">Lab: Na⁺ 20%</button>
+      </div>
+      <div class="two">
+        <div class="ctrl">
+          <div class="top"><label for="kout">[K⁺]<sub>o</sub> <span id="koutVal">4.0</span> mM</label><span class="chip ok" id="kChip">Normal</span></div>
+          <input id="kout" type="range" min="1.5" max="10" step="0.1" value="4">
+          <div class="scale"><span>1.5</span><span>3.5–5.0</span><span>10</span></div>
+        </div>
+        <div class="ctrl">
+          <div class="top"><label for="nao">[Na⁺]<sub>o</sub> <span id="naoVal">145</span> mM</label><span class="chip ok" id="naChip">Normal</span></div>
+          <input id="nao" type="range" min="30" max="230" step="1" value="145">
+          <div class="scale"><span>30 lab</span><span>110–170 clinical</span><span>230 lab</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clinical note -->
+    <div class="clinical" aria-live="polite">
+      <div class="label">Clinical note</div>
+      <div id="clinNote"></div>
+      <p class="limit"><b>Limitation:</b> this models a nerve membrane. It does not simulate the cardiac action potential, the ECG, or brain water, so it shows the cellular mechanism, not the clinical danger. Not for clinical decisions.</p>
+    </div>
+
+    </div>
+    <div class="dcol dright">
+    <!-- Membrane cross-section -->
+    <div class="area-cell col">
+      <div class="label">Membrane cross-section</div>
+      <canvas id="cell" width="400" height="300" aria-label="Membrane cross-section showing the Na+/K+ ATPase, K+ leak channel and Na+ leak channel with moving ions"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--na)"></i>Na⁺</span>
+        <span><i style="background:var(--k)"></i>K⁺</span>
+        <span class="mnemonic"><b>3-2-1 NOKIA</b> 3 Na⁺ Out · 2 K⁺ In · 1 ATP</span>
+      </div>
+    </div>
+
+    <!-- Membrane controls + readouts -->
+    <div class="area-memb col">
+      <div class="row">
+        <button id="pumpBtn" type="button">Turn Pump Off</button>
+        <button id="leakBtn" type="button">Close K⁺ Leak</button>
+        <button id="resetBtn" type="button">Reset</button>
+      </div>
+      <div class="row">
+        <span class="label">Speed</span>
+        <div class="seg" id="speed" role="group" aria-label="Simulation speed">
+          <button type="button" data-s="1">1×</button>
+          <button type="button" data-s="2" aria-pressed="true">2×</button>
+          <button type="button" data-s="5">5×</button>
+          <button type="button" data-s="10">10×</button>
+        </div>
+      </div>
+      <div class="readouts">
+        <div class="ro vm"><div class="k">V<sub>m</sub></div><div class="v" id="vm">−76.9</div></div>
+        <div class="ro ek"><div class="k">E<sub>K</sub></div><div class="v" id="ek">−94.9</div></div>
+        <div class="ro ena"><div class="k">E<sub>Na</sub></div><div class="v" id="ena">+60.6</div></div>
+        <div class="ro" id="volBox"><div class="k">Cell vol.</div><div class="v" id="vol">×1.00</div></div>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="area-status col">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="clock" id="clock"></div>
+    </div>
+    </div>
+  </section>
+
+  <section class="panel more">
+    <details>
+      <summary>How this works</summary>
+      <div class="eq" id="eq"></div>
+      <p class="note">Resting V<sub>m</sub> uses the Goldman–Hodgkin–Katz equation with the pump's 3:2 ratio (r = 1.5, the Mullins–Noda form), with P<sub>Na</sub>/P<sub>K</sub> = 0.04. Closing the K⁺ leak drops P<sub>K</sub> to 0.2, since other K⁺ channels remain.</p>
+      <p class="note">The pump acts on two timescales. Turning it off sets r = 1, which removes its small direct electrogenic share at once (about 4 mV, rising to about 6 mV as Cl⁻ settles). The larger effect comes slowly, as the gradients run down. Rundown ends at Gibbs–Donnan equilibrium, not at equal concentrations: impermeant intracellular anions (135 mM assumed) hold [K⁺]<sub>in</sub> near 1.5 × [K⁺]<sub>out</sub> and V<sub>m</sub> near −12 mV, while Na⁺ and Cl⁻ enter and the cell swells. Time is compressed: one simulated minute stands for many minutes to hours in a real cell.</p>
+      <p class="note">The action potential uses Hodgkin–Huxley voltage-gated Na⁺ and K⁺ channels, with the gating curves anchored to this cell's resting potential, on top of the resting model above. Each stimulus starts from the current resting state, so electrolytes change the AP on their own: hypokalemia hyperpolarizes the cell and raises the stimulus needed; mild hyperkalemia depolarizes it toward threshold; severe hyperkalemia inactivates many Na⁺ channels (h gate), so the AP shrinks. With these squid-axon kinetics the depolarized cell also becomes unstable and fires repeatedly before it reaches full depolarization block, which needs a larger depolarization (closing the K⁺ leak shows it). Plasma Na⁺ barely moves the resting potential but sets E<sub>Na</sub>, and with it the overshoot. The kinetics are squid-axon rates, so the time course is slower than a mammalian neuron.</p>
+      <p class="note">Tissue. In nerve, P<sub>K</sub> is fixed, so hypokalemia makes E<sub>K</sub> more negative and hyperpolarizes the cell: further from threshold, less excitable. In skeletal and cardiac muscle the resting K⁺ conductance comes largely from inward-rectifier (Kir) channels, whose conductance falls as plasma [K⁺] falls. With less K⁺ conductance the membrane loses its K⁺ dominance and can depolarize paradoxically, inactivating Na⁺ channels: the basis of weakness and paralysis in severe hypokalemia and of arrhythmia risk in the heart. The muscle setting models this as P<sub>K</sub> ∝ [K⁺]<sub>o</sub>, a teaching approximation; the real relationship is steeper and differs between heart and skeletal muscle. The action potential uses squid-axon kinetics in both settings.</p>
+      <p class="note">Threshold is found from the model, not fixed at −55 mV: it is the voltage reached by the smallest 1-ms stimulus that triggers a regenerative upstroke. It shifts with conditions, and when no stimulus up to 80 µA/cm² fires the cell, the page reports it as inexcitable.</p>
+      <p class="note"><b>Limitations.</b> The model is nerve-focused: Hodgkin–Huxley squid-axon kinetics, one compartment, no Ca²⁺ currents, so it does not reproduce the cardiac action potential (plateau, refractoriness), conduction, the ECG or arrhythmias. The muscle setting changes only the resting K⁺ conductance. Cell volume is an index, not a brain-water model, and ignores the osmolyte adaptation of chronic hyponatremia. Time is compressed. Values are for teaching mechanisms, not for clinical decisions.</p>
+      <p class="note">Cl⁻ is included with Hodgkin and Katz's squid permeability ratio (P<sub>K</sub> : P<sub>Na</sub> : P<sub>Cl</sub> = 1 : 0.04 : 0.45) and redistributes passively over a few seconds. Once settled it carries no net current, so the resting potential is the same as without it, but right after a change in [Na⁺]<sub>o</sub> or [K⁺]<sub>o</sub> it buffers V<sub>m</sub>. This reproduces Hodgkin and Katz's (1949) finding that lowering external Na⁺ barely moves the resting potential while the overshoot falls roughly as E<sub>Na</sub> predicts. Max dV/dt is the steepest rate of rise of the upstroke, their most Na⁺-sensitive measure.</p>
+      <p class="note">Cell volume is an approximate index: intracellular osmoles relative to rest, divided by plasma osmolality (2 × [Na⁺ + K⁺] + 10) relative to normal. Hyponatremia swells cells, which is why it causes cerebral edema; hypernatremia shrinks them.</p>
+    </details>
+
+    <details>
+      <summary>Advanced: intracellular [K⁺]</summary>
+      <div class="ctrl">
+        <div class="top"><label for="kin">Intracellular [K⁺]: <span id="kinVal">140.0</span> mM</label></div>
+        <input id="kin" type="range" min="1" max="140" step="1" value="140">
+      </div>
+      <p class="note">While the pump is on it restores [K⁺]<sub>in</sub> toward 140 mM and [Na⁺]<sub>in</sub> toward 15 mM, so a change here fades back. Turn the pump off to hold a new value.</p>
+    </details>
+
+  </section>
+
+  <footer class="license">
+    <svg viewBox="0 0 496 121" role="img" aria-label="Creative Commons BY-NC-SA 4.0">
+      <g stroke-width="10" fill="none">
+        <circle cx="158.3" cy="60.7" r="53"/>
+        <circle cx="336" cy="60.7" r="53"/>
+        <path d="M71.5 89h173.5M249 38H71.5"/>
+        <path d="M135.3 45.7l23 30 23-30M313 45.7l23 30 23-30"/>
+      </g>
+      <text x="400" y="88" font-size="90">4.0</text>
+    </svg>
+    <p><b>© 2024–2026 Ian V. J. Murray.</b> Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a>. You may share and adapt it for non-commercial teaching and research, provided you credit Ian V. J. Murray, link to the license, note any changes, and share adaptations under the same license.</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  // ================= Resting model =================
+  const RTF = 26.7;            // RT/F at 37 °C, mV
+  const P_NA = 0.04;           // P_Na relative to P_K (open)
+  const P_CL = 0.45;           // P_Cl relative to P_K: Hodgkin & Katz's squid ratio 1 : 0.04 : 0.45 (also in the original app)
+  const CL_RATE = 0.02;        // per 100 ms tick at 1x: Cl- redistributes passively, more slowly than Vm changes
+  const P_K_OPEN = 1.0, P_K_CLOSED = 0.2;
+  const PUMP_RATE = 0.05;      // per 100 ms tick at 1×
+  const RUNDOWN = 0.004;       // per 100 ms tick at 1×
+  const A_IN = 135;            // impermeant intracellular anions (mM)
+  const CL_REST = (4 + 145) * Math.exp(-76.9 / RTF);
+  const EC_OSM_NORMAL = 2 * (145 + 4) + 10;
+  const IC_OSM_REST = 140 + 15 + CL_REST + A_IN;
+  const DEFAULTS = { pump: true, leak: true, Ki: 140, Ko: 4, Nai: 15, Nao: 145, Cli: CL_REST, tOff: 0 };
+  let s = { ...DEFAULTS };
+  let speed = 2;
+  // One recording: slow samples (1 unit each, 600 units = 60 s on screen) plus AP segments recorded at fast sweep
+  const TAPE_W = 600, AP_SEG_W = 150;
+  let tape = [], pending = [], tapeWidth = 0, segId = 0;
+  function tapePush(pt) {
+    tape.push(pt); tapeWidth += pt.w;
+    while (tape.length && tapeWidth - tape[0].w > TAPE_W) tapeWidth -= tape.shift().w;
+  }
+
+  // Tissue: in nerve P_K is fixed; in skeletal and cardiac muscle the inward-rectifier K+ conductance
+  // falls as plasma [K+] falls (modelled as P_K proportional to [K+]o / 4 mM, a teaching approximation)
+  let tissue = 'nerve';
+  const pK = () => (s.leak ? P_K_OPEN : P_K_CLOSED) * (tissue === 'muscle' ? s.Ko / 4 : 1);
+  const r = () => (s.pump ? 1.5 : 1);
+  const EK = () => RTF * Math.log(s.Ko / s.Ki);
+  const ENa = () => RTF * Math.log(s.Nao / s.Nai);
+  const CL_O = () => s.Ko + s.Nao;   // extracellular Cl- (electroneutral with the cations in this model)
+  // GHK with the pump ratio on the K+ terms. Cl- carries no net current once it has redistributed (E_Cl = Vm),
+  // so it leaves the steady state unchanged but buffers Vm against sudden changes in [Na+]o or [K+]o.
+  const Vm = () => RTF * Math.log((r() * pK() * s.Ko + P_NA * s.Nao + P_CL * s.Cli) / (r() * pK() * s.Ki + P_NA * s.Nai + P_CL * CL_O()));
+  const ECl = () => -RTF * Math.log(CL_O() / s.Cli);
+
+  function donnan() {
+    // Outside: cations = Cl-;  inside: cations = Cl- + A.  λ = [K]i/[K]o = [Na]i/[Na]o = [Cl]o/[Cl]i
+    const C = s.Ko + s.Nao;
+    const lam = (A_IN + Math.sqrt(A_IN * A_IN + 4 * C * C)) / (2 * C);
+    return { lam, Ki: lam * s.Ko, Nai: lam * s.Nao, Cli: C / lam };
+  }
+  const volume = () => {
+    const ic = (s.Ki + s.Nai + s.Cli + A_IN) / IC_OSM_REST;
+    const ec = (2 * (s.Nao + s.Ko) + 10) / EC_OSM_NORMAL;
+    return ic / ec;
+  };
+
+  const REST = (() => {
+    const v = RTF * Math.log((1.5 * 4 + P_NA * 145) / (1.5 * 140 + P_NA * 15));
+    return { k: P_K_OPEN * (v - RTF * Math.log(4 / 140)), na: P_NA * (RTF * Math.log(145 / 15) - v) };
+  })();
+
+  function step() {
+    if (s.pump) {
+      s.Ki += (140 - s.Ki) * PUMP_RATE;
+      s.Nai += (15 - s.Nai) * PUMP_RATE;
+      s.Cli += (CL_O() * Math.exp(Vm() / RTF) - s.Cli) * CL_RATE;
+    } else {
+      s.tOff += 0.1;
+      const d = donnan(), k = RUNDOWN * pK();
+      s.Ki += (d.Ki - s.Ki) * k;
+      s.Nai += (d.Nai - s.Nai) * k;
+      s.Cli += (d.Cli - s.Cli) * k;
+    }
+  }
+  function tick() {
+    for (let i = 0; i < speed; i++) step();
+    if (!pending.length) tapePush({ v: Vm(), w: 1 });
+    syncUI();
+  }
+
+  // ================= Action potential (Hodgkin–Huxley) =================
+  const G_NA = 120, G_K = 36, G_L = 2.0;   // mS/cm²; background conductance holds rest at the GHK value
+  const ANCHOR = 10;                          // gating curves shifted 10 mV, toward this cell's rest
+  const an = V => { const u = V + 55; return Math.abs(u) < 1e-4 ? 0.1 : 0.01 * u / (1 - Math.exp(-u / 10)); };
+  const bn = V => 0.125 * Math.exp(-(V + 65) / 80);
+  const am = V => { const u = V + 40; return Math.abs(u) < 1e-4 ? 1 : 0.1 * u / (1 - Math.exp(-u / 10)); };
+  const bm = V => 4 * Math.exp(-(V + 65) / 18);
+  const ah = V => 0.07 * Math.exp(-(V + 65) / 20);
+  const bh = V => 1 / (1 + Math.exp(-(V + 35) / 10));
+  const AP_T = 20, AP_DT = 0.01, AP_STIM_AT = 2, AP_STIM_DUR = 1, AP_SAMPLE = 5;
+
+  function runAP(stim, quick = false) {
+    const V0 = Vm(), eK = EK(), eNa = ENa();
+    const W0 = V0 + ANCHOR;
+    let m = am(W0) / (am(W0) + bm(W0)), h = ah(W0) / (ah(W0) + bh(W0)), n = an(W0) / (an(W0) + bn(W0));
+    // Background reversal chosen so the cell sits exactly at its GHK resting potential before the stimulus
+    const EL = V0 + (G_NA * m ** 3 * h * (V0 - eNa) + G_K * n ** 4 * (V0 - eK)) / G_L;
+    let V = V0, peak = V0, vStimEnd = V0;
+    const trace = [];
+    const steps = Math.round(AP_T / AP_DT);
+    for (let i = 0; i <= steps; i++) {
+      const t = i * AP_DT;
+      if (!quick && i % AP_SAMPLE === 0) trace.push(V);
+      if (Math.abs(t - (AP_STIM_AT + AP_STIM_DUR)) < AP_DT / 2) vStimEnd = V;
+      const I = t >= AP_STIM_AT && t < AP_STIM_AT + AP_STIM_DUR ? stim : 0;
+      const U = V + ANCHOR;
+      const iIon = G_NA * m ** 3 * h * (V - eNa) + G_K * n ** 4 * (V - eK) + G_L * (V - EL);
+      V += AP_DT * (I - iIon);
+      m += AP_DT * (am(U) * (1 - m) - bm(U) * m);
+      h += AP_DT * (ah(U) * (1 - h) - bh(U) * h);
+      n += AP_DT * (an(U) * (1 - n) - bn(U) * n);
+      if (t > AP_STIM_AT) peak = Math.max(peak, V);
+    }
+    if (quick) return { peak, vStimEnd, V0 };
+    // spikes: local maxima at least 30 mV above the starting resting potential
+    const spikes = [];
+    for (let i = 1; i < trace.length - 1; i++) if (trace[i] > trace[i - 1] && trace[i] >= trace[i + 1] && trace[i] - V0 > 30) spikes.push(trace[i]);
+    const first = spikes.length ? spikes[0] : peak;
+    let dvdt = 0;
+    for (let i = 1; i < trace.length; i++) dvdt = Math.max(dvdt, (trace[i] - trace[i - 1]) / (AP_DT * AP_SAMPLE));
+    let result = !spikes.length ? 'No AP' : first > 30 ? 'Full AP' : 'Reduced AP';
+    if (spikes.length > 1) result += ` ×${spikes.length}`;
+    return { trace, peak: first, V0, eK, eNa, result, dvdt, spikes: spikes.length, label: conditionLabel(), thr: threshold() };
+  }
+
+  // Threshold, found from the model: bisect for the smallest 1-ms stimulus that gives a regenerative
+  // response (a regenerative upstroke at least 30 mV above rest); the threshold voltage is where that stimulus leaves the membrane.
+  const STIM_MAX = 80;  // same as the stimulus slider: "inexcitable" means no stimulus on the slider can fire it
+  let thrCache = { key: '', val: null };
+  function threshold() {
+    const key = [s.Ki, s.Nai, s.Cli].map(x => (Math.round(x * 2) / 2).toFixed(1)).concat([s.Ko.toFixed(1), Math.round(s.Nao)]).join('|') + pK() + r();
+    if (key === thrCache.key) return thrCache.val;
+    // regenerative: after the stimulus ends the membrane keeps rising by at least 10 mV, past +10 mV
+    const fires = st => { const q = runAP(st, true); return q.peak - q.V0 > 30 && q.peak > q.vStimEnd + 10; };
+    let val = null, prev = 0;
+    for (let st = 2; st <= STIM_MAX; st += 2) {
+      if (fires(st)) {
+        let lo = prev, hi = st;
+        for (let i = 0; i < 8; i++) { const mid = (lo + hi) / 2; fires(mid) ? (hi = mid) : (lo = mid); }
+        val = { stim: hi, V: runAP(hi, true).vStimEnd };
+        break;
+      }
+      prev = st;
+    }
+    thrCache = { key, val };
+    return val;
+  }
+
+  let apNow = null, apPrev = null, apStart = 0;
+  const AP_PLAY_MS = 1400;
+
+  // ================= Clinical labels =================
+  function kClass(k) {
+    if (k < 3.5) return ['Hypokalemia', k < 2.5 ? 'bad' : 'warn'];
+    if (k > 5.0) return ['Hyperkalemia', k >= 6.5 ? 'bad' : 'warn'];
+    return ['Normal', 'ok'];
+  }
+  const isLabNa = n => n < 110 || n > 170;
+  function naClass(n) {
+    if (isLabNa(n)) return ['Lab only', 'bad'];
+    if (n < 135) return ['Hyponatremia', n < 125 ? 'bad' : 'warn'];
+    if (n > 145) return ['Hypernatremia', n > 155 ? 'bad' : 'warn'];
+    return ['Normal', 'ok'];
+  }
+  function conditionLabel() {
+    const parts = [];
+    const [kl] = kClass(s.Ko), [nl] = naClass(s.Nao);
+    if (kl !== 'Normal') parts.push(`${kl} ${s.Ko.toFixed(1)}`);
+    if (nl === 'Lab only') parts.push(`Lab Na⁺ ${Math.round(s.Nao)}`); else if (nl !== 'Normal') parts.push(`${nl} ${Math.round(s.Nao)}`);
+    if (!s.pump) parts.push('pump off');
+    if (tissue === 'muscle') return 'Muscle: ' + (parts.length ? parts.join(', ') : 'normal');
+    if (!s.leak) parts.push('K⁺ leak closed');
+    return parts.length ? parts.join(', ') : 'Normal';
+  }
+
+  // ================= UI =================
+  const $ = id => document.getElementById(id);
+  const mv = v => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
+  function setChip(el, [text, cls]) { el.textContent = text; el.className = `chip ${cls}`; }
+
+  // Clinical relevance for the current electrolytes (the simulator shows the mechanism; these name the danger)
+  const CLIN = {
+    hypoK: '<b>Hypokalemia:</b> muscle weakness, cramps and, when severe, paralysis and respiratory failure; in the heart, arrhythmias with flattened T waves and U waves, worse with digoxin. In nerve the cell hyperpolarizes; in skeletal and cardiac muscle falling inward-rectifier K⁺ conductance can depolarize it instead (switch Tissue).',
+    hyperK: '<b>Hyperkalemia:</b> the main danger is cardiac. As resting potential rises and Na⁺ channels inactivate, conduction slows: peaked T waves, then PR prolongation, QRS widening, a sine-wave pattern, ventricular fibrillation or asystole. Treated as an emergency: IV calcium stabilizes the myocardial membrane while insulin with glucose and β₂-agonists shift K⁺ into cells and the excess is removed.',
+    hypoNa: '<b>Hyponatremia:</b> the main danger is cerebral edema. Water follows osmoles into brain cells (see Cell vol.), raising intracranial pressure: headache, nausea, confusion, seizures, coma. Its effect on the action potential is small. In chronic hyponatremia brain cells adapt by shedding osmolytes, so correcting too fast risks osmotic demyelination; correction is deliberately slow.',
+    hyperNa: '<b>Hypernatremia:</b> water leaves brain cells and they shrink (see Cell vol.), which can stretch and tear cerebral vessels: irritability, lethargy, seizures, intracranial bleeding. Correcting too fast swings cells back toward edema, so correction is also gradual.',
+    labNa: '<b>Laboratory condition, not clinical:</b> plasma Na⁺ outside about 110–170 mM is not survivable. This reproduces Hodgkin and Katz (1949), who replaced external Na⁺ with isotonic dextrose: the resting potential barely changes, while the overshoot and the rate of rise fall with E<sub>Na</sub>. Below about 30% of normal Na⁺ the spike no longer crosses 0 mV. Cell volume is not shown because their solutions were isotonic.',
+    normal: '<p>Plasma K⁺ and Na⁺ are normal. Pick a preset to see the clinical danger that goes with it.</p>',
+  };
+  function clinicalNote() {
+    const out = [];
+    if (s.Ko < 3.5) out.push(CLIN.hypoK); else if (s.Ko > 5.0) out.push(CLIN.hyperK);
+    if (isLabNa(s.Nao)) out.push(CLIN.labNa); else if (s.Nao < 135) out.push(CLIN.hypoNa); else if (s.Nao > 145) out.push(CLIN.hyperNa);
+    return out.length ? out.map(t => `<p>${t}</p>`).join('') : CLIN.normal;
+  }
+  let lastClin = '';
+
+  function syncUI() {
+    const clin = clinicalNote();
+    if (clin !== lastClin) { $('clinNote').innerHTML = clin; lastClin = clin; }
+    const v = Vm();
+    $('vm').textContent = mv(v);
+    $('ek').textContent = mv(EK());
+    $('ena').textContent = mv(ENa());
+    const vol = volume();
+    $('vol').textContent = isLabNa(s.Nao) ? '—' : `×${vol.toFixed(2)}`;
+    $('volBox').className = 'ro' + (isLabNa(s.Nao) ? '' : vol > 1.05 ? ' swollen' : vol < 0.95 ? ' shrunk' : '');
+
+    $('pumpBtn').textContent = s.pump ? 'Turn Pump Off' : 'Turn Pump On';
+    $('pumpBtn').classList.toggle('off', !s.pump);
+    $('leakBtn').textContent = s.leak ? 'Close K⁺ Leak' : 'Open K⁺ Leak';
+    $('leakBtn').classList.toggle('off', !s.leak);
+
+    $('kinVal').textContent = s.Ki.toFixed(1);
+    $('koutVal').textContent = s.Ko.toFixed(1);
+    $('naoVal').textContent = Math.round(s.Nao);
+    if (document.activeElement !== $('kin')) $('kin').value = s.Ki;
+    if (document.activeElement !== $('kout')) $('kout').value = s.Ko;
+    if (document.activeElement !== $('nao')) $('nao').value = s.Nao;
+    setChip($('kChip'), kClass(s.Ko));
+    setChip($('naChip'), naClass(s.Nao));
+    document.querySelectorAll('#presets button').forEach(b => {
+      b.setAttribute('aria-pressed', String(+b.dataset.ko === +s.Ko.toFixed(1) && +b.dataset.nao === Math.round(s.Nao)));
+    });
+
+    $('clock').textContent = s.pump
+      ? `Pump running at ${speed}× speed: gradients held at their set points` +
+        (Math.abs(ECl() - Vm()) > 1 ? ` · Cl⁻ redistributing (E_Cl ${mv(ECl())} mV), Vm settling` : '')
+      : `Pump off for ${s.tOff.toFixed(0)} s of compressed time (${speed}×) · Donnan endpoint [K⁺]in ${donnan().Ki.toFixed(1)} mM`;
+
+    const st = $('status'), th = threshold();
+    if (!th) {
+      st.textContent = 'Inexcitable: the resting depolarization has inactivated most voltage-gated Na⁺ channels, so no stimulus up to 80 µA/cm² triggers an action potential.';
+      st.className = 'status warn';
+    } else {
+      if (th.stim < 2) {
+        st.textContent = `Resting potential (${mv(Vm())} mV) is at threshold: almost any stimulus fires the cell, and it can keep firing on its own.`;
+        st.className = 'status warn';
+      } else {
+        st.textContent = `Threshold ${mv(th.V)} mV, reached with ${th.stim.toFixed(0)} µA/cm² for 1 ms · P_Na : P_K = ${P_NA.toFixed(2)} : ${pK().toFixed(2)}`;
+        st.className = 'status';
+      }
+    }
+    $('eq').innerHTML =
+      `V<sub>m</sub> = 26.7 ln ( <b>${r().toFixed(1)}</b>·${pK().toFixed(2)}·${s.Ko.toFixed(1)} + 0.04·${Math.round(s.Nao)} + 0.45·${s.Cli.toFixed(1)} ) / ( <b>${r().toFixed(1)}</b>·${pK().toFixed(2)}·${s.Ki.toFixed(1)} + 0.04·${s.Nai.toFixed(1)} + 0.45·${CL_O().toFixed(0)} )`;
+  }
+
+  function showAPResult(ap) {
+    $('apRes').textContent = ap.result;
+    $('apResBox').className = 'ro ' + (ap.result.startsWith('Full') ? 'good' : ap.result.startsWith('Reduced') ? 'weak' : 'fail');
+    $('apNote').textContent = ap.spikes > 1 ? 'Fires again on its own: the depolarized resting potential is unstable (repetitive firing).' : '';
+    $('apPeak').textContent = `${mv(ap.peak)} mV`;
+    $('apRest').textContent = `${mv(ap.V0)} mV`;
+    $('apDvdt').textContent = ap.spikes ? `${ap.dvdt.toFixed(0)} V/s` : '—';
+  }
+
+  $('stimBtn').addEventListener('click', () => {
+    if (apNow) apPrev = apNow;
+    apNow = runAP(+$('stim').value);
+    apStart = performance.now();
+    const id = ++segId, w = AP_SEG_W / apNow.trace.length, n = apNow.trace.length, label = apNow.label;
+    pending = apNow.trace.map(v => ({ v, w, seg: id, n, label }));
+    showAPResult(apNow);
+  });
+  $('stim').addEventListener('input', e => { $('stimVal').textContent = e.target.value; });
+  $('pumpBtn').addEventListener('click', () => { s.pump = !s.pump; if (!s.pump) s.tOff = 0; syncUI(); });
+  $('leakBtn').addEventListener('click', () => { s.leak = !s.leak; syncUI(); });
+  $('resetBtn').addEventListener('click', () => {
+    s = { ...DEFAULTS }; tape = []; pending = []; tapeWidth = 0; particles = []; apNow = apPrev = null;
+    ['apRes', 'apPeak', 'apRest', 'apDvdt'].forEach(id => $(id).textContent = '—'); $('apResBox').className = 'ro';
+    syncUI();
+  });
+  $('kin').addEventListener('input', e => { s.Ki = +e.target.value; syncUI(); });
+  $('kout').addEventListener('input', e => { s.Ko = +e.target.value; syncUI(); });
+  $('nao').addEventListener('input', e => { s.Nao = +e.target.value; syncUI(); });
+  document.querySelectorAll('#presets button').forEach(b => b.addEventListener('click', () => {
+    s.Ko = +b.dataset.ko; s.Nao = +b.dataset.nao; syncUI();
+  }));
+  document.querySelectorAll('#tissue button').forEach(b => b.addEventListener('click', () => {
+    tissue = b.dataset.t;
+    document.querySelectorAll('#tissue button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    syncUI();
+  }));
+  document.querySelectorAll('#speed button').forEach(b => b.addEventListener('click', () => {
+    speed = +b.dataset.s;
+    document.querySelectorAll('#speed button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    syncUI();
+  }));
+
+  // ================= Canvases =================
+  const cell = $('cell'), scope = $('scope');
+  const ctx = cell.getContext('2d'), stx = scope.getContext('2d');
+  let SW = 900, SH = 340;
+  function setupHiDPI() {
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    cell.width = 400 * dpr; cell.height = 300 * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    SW = Math.max(300, Math.round(scope.getBoundingClientRect().width || 900));
+    SH = SW < 560 ? 260 : 300;
+    scope.width = SW * dpr; scope.height = SH * dpr; scope.style.height = SH + 'px';
+    stx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  setupHiDPI();
+  window.addEventListener('resize', setupHiDPI);
+
+  let colors = {};
+  const readColors = () => {
+    const cs = getComputedStyle(document.documentElement);
+    ['--ink','--muted','--grid','--ecf','--icf','--lipid','--na','--k','--pump','--trace','--ghost','--thresh','--off','--panel']
+      .forEach(n => colors[n.slice(2)] = cs.getPropertyValue(n).trim());
+  };
+  readColors();
+  const mq = matchMedia('(prefers-color-scheme: dark)');
+  mq.addEventListener && mq.addEventListener('change', readColors);
+  new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const sans = (w, px) => `${w} ${px}px "IBM Plex Sans", system-ui, sans-serif`;
+  const mono = (w, px) => `${w} ${px}px "IBM Plex Mono", ui-monospace, monospace`;
+
+  // ----- Membrane cross-section -----
+  const MEM_TOP = 120, MEM_BOT = 144, CW = 400, CH = 300;
+  const PUMP_X = 110, KCH_X = 230, NACH_X = 330;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let particles = [];
+  const acc = { pump: 0, k: 0, na: 0 };
+  const PUMP_CYCLES_PER_S = 2.2;
+
+  function spawn(ion, x, dir, spd = 60) {
+    const y0 = dir < 0 ? MEM_BOT + 26 : MEM_TOP - 26;
+    particles.push({ ion, x: x + (Math.random() - 0.5) * 6, y: y0, vy: dir * spd, life: 0, drift: (Math.random() - 0.5) * 10 });
+  }
+  function updateParticles(dt) {
+    if (!reduceMotion) {
+      const v = Vm();
+      if (s.pump) {
+        acc.pump += PUMP_CYCLES_PER_S * dt;
+        while (acc.pump >= 1) {
+          acc.pump -= 1;
+          for (let i = 0; i < 3; i++) setTimeout(() => spawn('na', PUMP_X - 6, -1), i * 60);
+          for (let i = 0; i < 2; i++) setTimeout(() => spawn('k', PUMP_X + 6, +1), 100 + i * 60);
+        }
+      }
+      // Leak flows scaled to their resting values, so at rest they balance the pump (2 K+ out, 3 Na+ in per cycle)
+      // No K+ passes through the drawn leak channel when it is closed (the remaining P_K belongs to other, undrawn K+ channels)
+      const kRate = s.leak ? Math.max(0, pK() * (v - EK()) / REST.k) * 2 * PUMP_CYCLES_PER_S : 0;
+      const naRate = Math.max(0, P_NA * (ENa() - v) / REST.na) * 0.6 * PUMP_CYCLES_PER_S; // Na+ leak drawn slower than K+ leak: P_Na << P_K
+      acc.k += kRate * dt; acc.na += naRate * dt;
+      while (acc.k >= 1) { acc.k -= 1; spawn('k', KCH_X, -1); }
+      while (acc.na >= 1) { acc.na -= 1; spawn('na', NACH_X, +1, 30); }
+    }
+    particles.forEach(p => { p.y += p.vy * dt; p.life += dt; if (Math.abs(p.y - (MEM_TOP + MEM_BOT) / 2) > 20) p.x += p.drift * dt; });
+    particles = particles.filter(p => p.life < 3 && p.y > 50 && p.y < 230);
+  }
+  function roundRect(c, x, y, w, h, rad) {
+    c.beginPath();
+    c.moveTo(x + rad, y); c.arcTo(x + w, y, x + w, y + h, rad); c.arcTo(x + w, y + h, x, y + h, rad);
+    c.arcTo(x, y + h, x, y, rad); c.arcTo(x, y, x + w, y, rad); c.closePath();
+  }
+  function protLabel(name, x, sub) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colors.ink; ctx.font = sans(600, 11); ctx.fillText(name, x, MEM_TOP - 44);
+    ctx.fillStyle = colors.muted; ctx.font = sans(500, 10); ctx.fillText(sub, x, MEM_TOP - 31);
+  }
+  function drawCell() {
+    const c = colors;
+    ctx.clearRect(0, 0, CW, CH);
+    ctx.fillStyle = c.ecf; ctx.fillRect(0, 0, CW, MEM_TOP);
+    ctx.fillStyle = c.icf; ctx.fillRect(0, MEM_BOT, CW, CH - MEM_BOT);
+    ctx.fillStyle = c.lipid; ctx.globalAlpha = 0.45; ctx.fillRect(0, MEM_TOP, CW, MEM_BOT - MEM_TOP); ctx.globalAlpha = 1;
+    for (let x = 4; x < CW; x += 8) {
+      ctx.beginPath(); ctx.arc(x, MEM_TOP + 2, 3, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, MEM_BOT - 2, 3, 0, 7); ctx.fill();
+    }
+    ctx.font = sans(600, 11); ctx.textAlign = 'left'; ctx.fillStyle = c.muted;
+    ctx.fillText('EXTRACELLULAR', 10, 18);
+    ctx.fillText('INTRACELLULAR', 10, CH - 46);
+    ctx.font = mono(600, 12);
+    ctx.fillStyle = c.k;  ctx.fillText(`[K+]  ${s.Ko.toFixed(1)} mM`, 10, 36);
+    ctx.fillStyle = c.na; ctx.fillText(`[Na+] ${s.Nao.toFixed(0)} mM`, 10, 52);
+    ctx.fillStyle = c.k;  ctx.fillText(`[K+]  ${s.Ki.toFixed(1)} mM`, 10, CH - 28);
+    ctx.fillStyle = c.na; ctx.fillText(`[Na+] ${s.Nai.toFixed(1)} mM`, 10, CH - 12);
+
+    const pc = s.pump ? c.pump : c.off;
+    ctx.fillStyle = pc; ctx.globalAlpha = s.pump ? 0.85 : 0.5;
+    roundRect(ctx, PUMP_X - 22, MEM_TOP - 12, 44, MEM_BOT - MEM_TOP + 24, 10); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = c.panel; ctx.font = sans(700, 10); ctx.textAlign = 'center';
+    ctx.fillText('ATP', PUMP_X, (MEM_TOP + MEM_BOT) / 2 + 4);
+    protLabel('Na+/K+ ATPase', PUMP_X, s.pump ? '3 Na+ out · 2 K+ in · 1 ATP' : 'stopped');
+
+    const gap = s.leak ? 7 : 1;
+    ctx.fillStyle = s.leak ? c.k : c.off;
+    roundRect(ctx, KCH_X - gap - 12, MEM_TOP - 10, 12, MEM_BOT - MEM_TOP + 20, 4); ctx.fill();
+    roundRect(ctx, KCH_X + gap, MEM_TOP - 10, 12, MEM_BOT - MEM_TOP + 20, 4); ctx.fill();
+    protLabel('K+ leak channel', KCH_X, s.leak ? 'open' : 'closed');
+
+    ctx.fillStyle = c.na;
+    roundRect(ctx, NACH_X - 13, MEM_TOP - 10, 9, MEM_BOT - MEM_TOP + 20, 4); ctx.fill();
+    roundRect(ctx, NACH_X + 4, MEM_TOP - 10, 9, MEM_BOT - MEM_TOP + 20, 4); ctx.fill();
+    protLabel('Na+ leak', NACH_X, 'always open');
+
+    particles.forEach(p => {
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 6, (3 - p.life) * 3));
+      ctx.fillStyle = p.ion === 'na' ? c.na : c.k;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.ion === 'na' ? 3.5 : 4.5, 0, 7); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // ----- Scope: one continuous recording -----
+  // Slow sweep (compressed seconds) for the resting potential; each stimulus is recorded inline at fast sweep.
+  const V_MAX = 70, V_MIN = -110;
+  function feedPending(now) {
+    if (!pending.length) return;
+    const total = pending[0].n, frac = reduceMotion ? 1 : Math.min(1, (now - apStart) / AP_PLAY_MS);
+    const due = Math.round(frac * total) - (total - pending.length);
+    for (let k = 0; k < due && pending.length; k++) tapePush(pending.shift());
+  }
+  function drawScope() {
+    const g = stx, W = SW, H = SH, c = colors;
+    const narrow = W < 560;
+    const L = narrow ? 40 : 46, R = 12, T = 16, B = 34;
+    const X0 = L, X1 = W - R, plotW = X1 - X0, unit = plotW / TAPE_W;
+    const yOf = v => T + ((V_MAX - Math.max(V_MIN, Math.min(V_MAX, v))) / (V_MAX - V_MIN)) * (H - T - B);
+    g.clearRect(0, 0, W, H);
+
+    const pts = new Array(tape.length);
+    let x = X1;
+    for (let i = tape.length - 1; i >= 0; i--) { pts[i] = x; x -= tape[i].w * unit; }
+
+    const segs = new Map();
+    tape.forEach((p, i) => {
+      if (!p.seg) return;
+      const sg = segs.get(p.seg) || { a: pts[i], b: pts[i], p };
+      sg.a = Math.min(sg.a, pts[i]); sg.b = Math.max(sg.b, pts[i]); segs.set(p.seg, sg);
+    });
+    segs.forEach(sg => {
+      const a = Math.max(X0, sg.a), b = Math.min(X1, sg.b);
+      if (b > a) { g.fillStyle = c.grid; g.globalAlpha = 0.6; g.fillRect(a, T, b - a, H - T - B); g.globalAlpha = 1; }
+    });
+
+    g.font = mono(500, 11); g.textAlign = 'right'; g.textBaseline = 'middle';
+    for (let v = -100; v <= 60; v += 20) {
+      g.strokeStyle = v === 0 ? c.muted : c.grid; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(X0, yOf(v)); g.lineTo(X1, yOf(v)); g.stroke();
+      g.fillStyle = c.muted; g.fillText(v > 0 ? `+${v}` : String(v), L - 6, yOf(v));
+    }
+    g.strokeStyle = c.ink; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(X0, T); g.lineTo(X0, H - B); g.lineTo(X1, H - B); g.stroke();
+    g.textBaseline = 'alphabetic'; g.textAlign = 'center'; g.fillStyle = c.muted; g.font = sans(500, 11);
+    g.fillText(narrow ? `slow sweep 60 s (${speed}×) · shaded APs 20 ms` : `slow sweep: last 60 s, time compressed, ${speed}×  ·  shaded: action potentials at fast sweep, 20 ms each`, (X0 + X1) / 2, H - 10);
+
+    const th = threshold();
+    const refs = [
+      { v: ENa(), col: c.na, dash: [6, 4], text: `E Na ${mv(ENa())}` },
+      { v: EK(), col: c.k, dash: [6, 4], text: `E K ${mv(EK())}` },
+    ];
+    if (th) refs.push({ v: th.V, col: c.thresh, dash: [3, 3], text: `threshold ${mv(th.V)}` });
+    refs.forEach(rf => {
+      g.strokeStyle = rf.col; g.lineWidth = 1.5; g.setLineDash(rf.dash);
+      g.beginPath(); g.moveTo(X0, yOf(rf.v)); g.lineTo(X1, yOf(rf.v)); g.stroke(); g.setLineDash([]);
+    });
+    const placed = refs.map(rf => ({ ...rf, y: yOf(rf.v) - 4 })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < placed.length; i++) if (placed[i].y - placed[i - 1].y < 13) placed[i].y = placed[i - 1].y + 13;
+    if (!th) placed.push({ text: 'no threshold: inexcitable', col: c.thresh, y: placed[placed.length - 1].y + 13 });
+    g.textAlign = 'left'; g.font = sans(600, 10);
+    placed.forEach(rf => {
+      const y = Math.max(T + 10, Math.min(H - B - 4, rf.y));
+      const w = g.measureText(rf.text).width;
+      g.fillStyle = c.panel; g.globalAlpha = 0.85; g.fillRect(X0 + 4, y - 10, w + 6, 13); g.globalAlpha = 1;
+      g.fillStyle = rf.col; g.fillText(rf.text, X0 + 7, y);
+    });
+
+    if (tape.length > 1) {
+      g.strokeStyle = c.trace; g.lineWidth = 2.5; g.lineJoin = 'round'; g.beginPath();
+      let started = false;
+      tape.forEach((p, i) => {
+        if (pts[i] < X0) return;
+        const y = yOf(p.v);
+        if (started) g.lineTo(pts[i], y); else { g.moveTo(pts[i], y); started = true; }
+      });
+      g.stroke();
+      g.fillStyle = c.trace; g.beginPath(); g.arc(X1, yOf(tape[tape.length - 1].v), 4, 0, 7); g.fill();
+    } else {
+      g.fillStyle = c.muted; g.textAlign = 'center'; g.font = sans(500, 12);
+      g.fillText('Recording starts…', (X0 + X1) / 2, yOf(-20));
+    }
+
+    g.font = sans(600, 10);
+    segs.forEach(sg => {
+      if (sg.b < X0 + 20) return;
+      const span = sg.p.n * sg.p.w * unit;
+      const stimX = sg.a + (AP_STIM_AT / AP_T) * span;
+      if (stimX > X0 && stimX < X1) {
+        g.fillStyle = c.trace; g.beginPath();
+        g.moveTo(stimX, H - B - 1); g.lineTo(stimX - 4, H - B - 8); g.lineTo(stimX + 4, H - B - 8); g.closePath(); g.fill();
+      }
+      const label = sg.p.label.length > 28 ? sg.p.label.slice(0, 27) + '…' : sg.p.label;
+      const w = g.measureText(label).width;
+      const lx = Math.max(X0 + 2, Math.min(X1 - w - 2, sg.a + span / 2 - w / 2));
+      g.fillStyle = c.muted; g.textAlign = 'left'; g.fillText(label, lx, H - B - 12);
+    });
+  }
+
+  // ================= Loop =================
+  syncUI();
+  setInterval(tick, 100);
+  let prev = performance.now();
+  const frame = now => {
+    const dt = Math.min(0.1, (now - prev) / 1000); prev = now;
+    feedPending(now); updateParticles(dt); drawCell(); drawScope();
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  document.fonts && document.fonts.ready.then(() => { readColors(); });
+})();
+</script>
+
+</body>
+</html>
